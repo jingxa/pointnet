@@ -7,6 +7,15 @@ Date: November 2016
 import numpy as np
 import tensorflow as tf
 
+'''
+创建一个存在cpu中的变量
+参数：
+  name: 变量名
+  shape: ints列表，变量的维度
+  initializer: 变量初始器
+返回：
+  变量 Tensor
+'''
 def _variable_on_cpu(name, shape, initializer, use_fp16=False):
   """Helper to create a Variable stored on CPU memory.
   Args:
@@ -16,24 +25,28 @@ def _variable_on_cpu(name, shape, initializer, use_fp16=False):
   Returns:
     Variable Tensor
   """
+  # 选择cpu0
   with tf.device('/cpu:0'):
-    dtype = tf.float16 if use_fp16 else tf.float32
-    var = tf.get_variable(name, shape, initializer=initializer, dtype=dtype)
+    dtype = tf.float16 if use_fp16 else tf.float32 # 定义数据类型
+    var = tf.get_variable(name, shape, initializer=initializer, dtype=dtype) 
   return var
+
+
 
 def _variable_with_weight_decay(name, shape, stddev, wd, use_xavier=True):
   """Helper to create an initialized Variable with weight decay.
-
   Note that the Variable is initialized with a truncated normal distribution.
   A weight decay is added only if one is specified.
+    使用权值衰减，帮助创建一个初始化的变量；注意： 变量是用截断正态分布初始化的；
+    仅当指定了权值衰减时才会添加衰减。
 
   Args:
-    name: name of the variable
-    shape: list of ints
-    stddev: standard deviation of a truncated Gaussian
+    name: name of the variable 变量名
+    shape: list of ints 
+    stddev: standard deviation of a truncated Gaussian  标准差
     wd: add L2Loss weight decay multiplied by this float. If None, weight
-        decay is not added for this Variable.
-    use_xavier: bool, whether to use xavier initializer
+        decay is not added for this Variable. 【加L2Loss权重衰减乘以这个浮点数。 如果为“无”，则不会为此变量添加衰减。】
+    use_xavier: bool, whether to use xavier initializer xavier初始化器
 
   Returns:
     Variable Tensor
@@ -44,7 +57,7 @@ def _variable_with_weight_decay(name, shape, stddev, wd, use_xavier=True):
     initializer = tf.truncated_normal_initializer(stddev=stddev)
   var = _variable_on_cpu(name, shape, initializer)
   if wd is not None:
-    weight_decay = tf.multiply(tf.nn.l2_loss(var), wd, name='weight_loss')
+    weight_decay = tf.multiply(tf.nn.l2_loss(var), wd, name='weight_loss') # L2_loss：L2范数的一半，
     tf.add_to_collection('losses', weight_decay)
   return var
 
@@ -63,52 +76,53 @@ def conv1d(inputs,
            bn_decay=None,
            is_training=None):
   """ 1D convolution with non-linear operation.
-
+      一维卷积用非线性操作；
   Args:
-    inputs: 3-D tensor variable BxLxC
-    num_output_channels: int
-    kernel_size: int
-    scope: string
-    stride: int
-    padding: 'SAME' or 'VALID'
+    inputs: 3-D tensor variable BxLxC 三维tensor变量（batch,length,channels）样本数，长度，通道
+    num_output_channels: int # 输出通道数
+    kernel_size: int # 卷积核大小
+    scope: string # 范围前缀
+    stride: int # 步长
+    padding: 'SAME' or 'VALID' # 填充 ，same:
     use_xavier: bool, use xavier_initializer if true
     stddev: float, stddev for truncated_normal init
     weight_decay: float
-    activation_fn: function
-    bn: bool, whether to use batch norm
+    activation_fn: function # 激活函数
+    bn: bool, whether to use batch norm # 是否使用batch 规范化
     bn_decay: float or float tensor variable in [0,1]
     is_training: bool Tensor variable
 
   Returns:
     Variable tensor
   """
+  # 添加scope范围下的变量
   with tf.variable_scope(scope) as sc:
-    num_in_channels = inputs.get_shape()[-1].value
+    num_in_channels = inputs.get_shape()[-1].value # 输出c通道的数量
     kernel_shape = [kernel_size,
-                    num_in_channels, num_output_channels]
+                    num_in_channels, num_output_channels] # 核的维度：
     kernel = _variable_with_weight_decay('weights',
                                          shape=kernel_shape,
                                          use_xavier=use_xavier,
                                          stddev=stddev,
-                                         wd=weight_decay)
+                                         wd=weight_decay) # 建立一个核变量
     outputs = tf.nn.conv1d(inputs, kernel,
                            stride=stride,
-                           padding=padding)
+                           padding=padding) # 得到卷积结果
     biases = _variable_on_cpu('biases', [num_output_channels],
-                              tf.constant_initializer(0.0))
-    outputs = tf.nn.bias_add(outputs, biases)
+                              tf.constant_initializer(0.0)) # 建立一个bias变量
+    outputs = tf.nn.bias_add(outputs, biases) # 相加
 
     if bn:
       outputs = batch_norm_for_conv1d(outputs, is_training,
-                                      bn_decay=bn_decay, scope='bn')
+                                      bn_decay=bn_decay, scope='bn')# 规范化
 
     if activation_fn is not None:
-      outputs = activation_fn(outputs)
+      outputs = activation_fn(outputs) # 
     return outputs
 
 
 
-
+# 二维卷积
 def conv2d(inputs,
            num_output_channels,
            kernel_size,
@@ -125,11 +139,11 @@ def conv2d(inputs,
   """ 2D convolution with non-linear operation.
 
   Args:
-    inputs: 4-D tensor variable BxHxWxC
+    inputs: 4-D tensor variable BxHxWxC (batch , height, width, channels)
     num_output_channels: int
-    kernel_size: a list of 2 ints
+    kernel_size: a list of 2 ints 二元列表
     scope: string
-    stride: a list of 2 ints
+    stride: a list of 2 ints 
     padding: 'SAME' or 'VALID'
     use_xavier: bool, use xavier_initializer if true
     stddev: float, stddev for truncated_normal init
@@ -169,6 +183,7 @@ def conv2d(inputs,
       return outputs
 
 
+# 解二维卷积，卷积的逆向过程
 def conv2d_transpose(inputs,
                      num_output_channels,
                      kernel_size,
@@ -208,7 +223,7 @@ def conv2d_transpose(inputs,
       kernel_h, kernel_w = kernel_size
       num_in_channels = inputs.get_shape()[-1].value
       kernel_shape = [kernel_h, kernel_w,
-                      num_output_channels, num_in_channels] # reversed to conv2d
+                      num_output_channels, num_in_channels] # reversed to conv2d 逆过程，需要换下位置
       kernel = _variable_with_weight_decay('weights',
                                            shape=kernel_shape,
                                            use_xavier=use_xavier,
@@ -216,7 +231,7 @@ def conv2d_transpose(inputs,
                                            wd=weight_decay)
       stride_h, stride_w = stride
       
-      # from slim.convolution2d_transpose
+      # from slim.convolution2d_transpose 返回反卷积的维度
       def get_deconv_dim(dim_size, stride_size, kernel_size, padding):
           dim_size *= stride_size
 
@@ -249,6 +264,7 @@ def conv2d_transpose(inputs,
 
    
 
+# 3d卷积
 def conv3d(inputs,
            num_output_channels,
            kernel_size,
@@ -265,11 +281,11 @@ def conv3d(inputs,
   """ 3D convolution with non-linear operation.
 
   Args:
-    inputs: 5-D tensor variable BxDxHxWxC
+    inputs: 5-D tensor variable BxDxHxWxC 五维度：（batch, depth, height, width, channels）
     num_output_channels: int
-    kernel_size: a list of 3 ints
+    kernel_size: a list of 3 ints 三维列表[depth,height, width]
     scope: string
-    stride: a list of 3 ints
+    stride: a list of 3 ints 三维列表[strides_depth,strides_height,strides_width], 
     padding: 'SAME' or 'VALID'
     use_xavier: bool, use xavier_initializer if true
     stddev: float, stddev for truncated_normal init
@@ -283,7 +299,7 @@ def conv3d(inputs,
     Variable tensor
   """
   with tf.variable_scope(scope) as sc:
-    kernel_d, kernel_h, kernel_w = kernel_size
+    kernel_d, kernel_h, kernel_w = kernel_size # depth, height,width
     num_in_channels = inputs.get_shape()[-1].value
     kernel_shape = [kernel_d, kernel_h, kernel_w,
                     num_in_channels, num_output_channels]
@@ -308,6 +324,8 @@ def conv3d(inputs,
       outputs = activation_fn(outputs)
     return outputs
 
+
+#  全连接层
 def fully_connected(inputs,
                     num_outputs,
                     scope,
@@ -321,20 +339,20 @@ def fully_connected(inputs,
   """ Fully connected layer with non-linear operation.
   
   Args:
-    inputs: 2-D tensor BxN
+    inputs: 2-D tensor BxN 二维输入，（batch,number）
     num_outputs: int
   
   Returns:
     Variable tensor of size B x num_outputs.
   """
   with tf.variable_scope(scope) as sc:
-    num_input_units = inputs.get_shape()[-1].value
+    num_input_units = inputs.get_shape()[-1].value # 输入batch数量
     weights = _variable_with_weight_decay('weights',
                                           shape=[num_input_units, num_outputs],
                                           use_xavier=use_xavier,
                                           stddev=stddev,
-                                          wd=weight_decay)
-    outputs = tf.matmul(inputs, weights)
+                                          wd=weight_decay) # 权值矩阵
+    outputs = tf.matmul(inputs, weights) # 矩阵相乘
     biases = _variable_on_cpu('biases', [num_outputs],
                              tf.constant_initializer(0.0))
     outputs = tf.nn.bias_add(outputs, biases)
@@ -347,6 +365,7 @@ def fully_connected(inputs,
     return outputs
 
 
+# 2d max pool
 def max_pool2d(inputs,
                kernel_size,
                scope,
@@ -355,9 +374,9 @@ def max_pool2d(inputs,
   """ 2D max pooling.
 
   Args:
-    inputs: 4-D tensor BxHxWxC
-    kernel_size: a list of 2 ints
-    stride: a list of 2 ints
+    inputs: 4-D tensor BxHxWxC  四维输入（batch, height,width, channels）
+    kernel_size: a list of 2 ints 二元列表
+    stride: a list of 2 ints 二元列表
   
   Returns:
     Variable tensor
@@ -372,6 +391,8 @@ def max_pool2d(inputs,
                              name=sc.name)
     return outputs
 
+
+# 平均pooling 2d 
 def avg_pool2d(inputs,
                kernel_size,
                scope,
@@ -398,6 +419,8 @@ def avg_pool2d(inputs,
     return outputs
 
 
+
+# max pooling 3d 
 def max_pool3d(inputs,
                kernel_size,
                scope,
@@ -406,9 +429,9 @@ def max_pool3d(inputs,
   """ 3D max pooling.
 
   Args:
-    inputs: 5-D tensor BxDxHxWxC
-    kernel_size: a list of 3 ints
-    stride: a list of 3 ints
+    inputs: 5-D tensor BxDxHxWxC 五维输入 （batch, depth, height, width, channels）
+    kernel_size: a list of 3 ints 三元列表 [depth, height, width]
+    stride: a list of 3 ints 三元列表
   
   Returns:
     Variable tensor
@@ -423,6 +446,8 @@ def max_pool3d(inputs,
                                name=sc.name)
     return outputs
 
+
+# 平均pooling 3d
 def avg_pool3d(inputs,
                kernel_size,
                scope,
@@ -452,6 +477,7 @@ def avg_pool3d(inputs,
 
 
 
+# batch norm 
 def batch_norm_template(inputs, is_training, scope, moments_dims, bn_decay):
   """ Batch normalization on convolutional maps and beyond...
   Ref.: http://stackoverflow.com/questions/33949786/how-could-i-use-batch-normalization-in-tensorflow

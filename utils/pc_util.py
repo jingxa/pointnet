@@ -10,64 +10,68 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(BASE_DIR)
 
 # Draw point cloud
-from eulerangles import euler2mat
-
+from .eulerangles import euler2mat
 # Point cloud IO
 import numpy as np
-from plyfile import PlyData, PlyElement
+from .plyfile import PlyData, PlyElement
 
  
 # ----------------------------------------
 # Point Cloud/Volume Conversions
 # ----------------------------------------
 
+# 点云到体素的转换
 def point_cloud_to_volume_batch(point_clouds, vsize=12, radius=1.0, flatten=True):
     """ Input is BxNx3 batch of point cloud
         Output is Bx(vsize^3)
     """
     vol_list = []
-    for b in range(point_clouds.shape[0]):
-        vol = point_cloud_to_volume(np.squeeze(point_clouds[b,:,:]), vsize, radius)
+    for b in range(point_clouds.shape[0]):# b个N*3 points
+        vol = point_cloud_to_volume(np.squeeze(point_clouds[b,:,:]), vsize, radius)# 降低维度，从三维到二维，变成N*3在计算
         if flatten:
-            vol_list.append(vol.flatten())
+            vol_list.append(vol.flatten()) # 变成一维 3N*1
         else:
-            vol_list.append(np.expand_dims(np.expand_dims(vol, -1), 0))
+            vol_list.append(np.expand_dims(np.expand_dims(vol, -1), 0)) # 变成五维（1，x,y,z,1）
     if flatten:
-        return np.vstack(vol_list)
+        return np.vstack(vol_list) # 以行为单位，形成 B* ?
     else:
-        return np.concatenate(vol_list, 0)
+        return np.concatenate(vol_list, 0) # 以行为单位，形成 b* ?
 
 
+# 一组点云的转换,减少点云数量
 def point_cloud_to_volume(points, vsize, radius=1.0):
     """ input is Nx3 points.
         output is vsize*vsize*vsize
         assumes points are in range [-radius, radius]
     """
-    vol = np.zeros((vsize,vsize,vsize))
+    vol = np.zeros((vsize,vsize,vsize)) # v*v*v
     voxel = 2*radius/float(vsize)
     locations = (points + radius)/voxel
+    print(locations)
     locations = locations.astype(int)
     vol[locations[:,0],locations[:,1],locations[:,2]] = 1.0
     return vol
 
+
 #a = np.zeros((16,1024,3))
 #print point_cloud_to_volume_batch(a, 12, 1.0, False).shape
 
+# 体素转换点云
 def volume_to_point_cloud(vol):
     """ vol is occupancy grid (value = 0 or 1) of size vsize*vsize*vsize
         return Nx3 numpy array.
     """
     vsize = vol.shape[0]
-    assert(vol.shape[1] == vsize and vol.shape[1] == vsize)
+    assert(vol.shape[1] == vsize and vol.shape[1] == vsize) #？？？
     points = []
     for a in range(vsize):
         for b in range(vsize):
             for c in range(vsize):
                 if vol[a,b,c] == 1:
-                    points.append(np.array([a,b,c]))
-    if len(points) == 0:
+                    points.append(np.array([a,b,c])) 
+    if len(points) == 0:    # 全为0点
         return np.zeros((0,3))
-    points = np.vstack(points)
+    points = np.vstack(points) # 将三通道分别形成一个维度，由 3* N 变成 N*3
     return points
 
 # ----------------------------------------
@@ -85,7 +89,7 @@ def read_ply(filename):
 def write_ply(points, filename, text=True):
     """ input: Nx3, write points to filename as PLY format. """
     points = [(points[i,0], points[i,1], points[i,2]) for i in range(points.shape[0])]
-    vertex = np.array(points, dtype=[('x', 'f4'), ('y', 'f4'),('z', 'f4')])
+    vertex = np.array(points, dtype=[('x', 'f4'), ('y', 'f4'),('z', 'f4')]) # 3元组* N
     el = PlyElement.describe(vertex, 'vertex', comments=['vertices'])
     PlyData([el], text=text).write(filename)
 

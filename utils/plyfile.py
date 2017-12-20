@@ -16,19 +16,20 @@
 #   along with python-plyfile.  If not, see
 #       <http://www.gnu.org/licenses/>.
 
-from itertools import islice as _islice
+from itertools import islice as _islice # 导入itertools迭代器中的islice
 
 import numpy as _np
-from sys import byteorder as _byteorder
+from sys import byteorder as _byteorder # 本地字节规则
 
-
+# python2 和python3的range
 try:
     _range = xrange
 except NameError:
-    _range = range
+    _range = range 
 
 
 # Many-many relation
+# 类型缩写对应关系
 _data_type_relation = [
     ('int8', 'i1'),
     ('char', 'i1'),
@@ -49,8 +50,10 @@ _data_type_relation = [
     ('double', 'f8')
 ]
 
+# 缩写转换
 _data_types = dict(_data_type_relation)
 _data_type_reverse = dict((b, a) for (a, b) in _data_type_relation)
+
 
 _types_list = []
 _types_set = set()
@@ -63,6 +66,7 @@ for (_a, _b) in _data_type_relation:
         _types_set.add(_b)
 
 
+# 字节规则，大端，小端
 _byte_order_map = {
     'ascii': '=',
     'binary_little_endian': '<',
@@ -77,6 +81,7 @@ _byte_order_reverse = {
 _native_byte_order = {'little': '<', 'big': '>'}[_byteorder]
 
 
+# 数据类型查找
 def _lookup_type(type_str):
     if type_str not in _data_type_reverse:
         try:
@@ -88,6 +93,7 @@ def _lookup_type(type_str):
     return _data_type_reverse[type_str]
 
 
+# 分割n个字符后加上空格；
 def _split_line(line, n):
     fields = line.split(None, n)
     if len(fields) == n:
@@ -98,6 +104,7 @@ def _split_line(line, n):
     return fields
 
 
+#
 def make2d(array, cols=None, dtype=None):
     '''
     Make a 2D array from an array of arrays.  The `cols' and `dtype'
@@ -118,6 +125,8 @@ def make2d(array, cols=None, dtype=None):
                         count=len(array))['_']
 
 
+
+# ply解析错误类
 class PlyParseError(Exception):
 
     '''
@@ -150,6 +159,8 @@ class PlyParseError(Exception):
                 self.message, self.element, self.row, self.prop)
 
 
+
+# ply头部数据
 class PlyData(object):
 
     '''
@@ -361,6 +372,8 @@ def _open_stream(stream, read_or_write):
         raise RuntimeError("expected open file or filename")
 
 
+
+# ply元素
 class PlyElement(object):
 
     '''
@@ -373,6 +386,7 @@ class PlyElement(object):
     Creating a PlyElement instance is generally done in one of two ways:
     as a byproduct of PlyData.read (when reading a PLY file) and by
     PlyElement.describe (before writing a PLY file).
+    创建一个ply实例以两种方式之一：PlyData.read()和PlyElement.describe()
 
     '''
 
@@ -382,6 +396,8 @@ class PlyElement(object):
         of obtaining PlyElement instances are PlyData.read (to read from
         a file) and PlyElement.describe (to construct from a numpy
         array).
+        初始化： 获得plyElement实例： PlyData.read('从一个ply文件')
+                                    PlyElement.describe(“从一个numpy数组")
 
         '''
         self._name = str(name)
@@ -713,6 +729,8 @@ class PlyElement(object):
                  self.comments))
 
 
+
+# ply属性描述
 class PlyProperty(object):
 
     '''

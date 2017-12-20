@@ -95,6 +95,7 @@ import numpy as np
 _FLOAT_EPS_4 = np.finfo(float).eps * 4.0
 
 
+# 计算旋转矩阵，zyx
 def euler2mat(z=0, y=0, x=0):
     ''' Return matrix for rotations around z, y and x axes
 
@@ -195,6 +196,7 @@ def euler2mat(z=0, y=0, x=0):
     return np.eye(3)
 
 
+# 从矩阵中计算欧拉角 M:矩阵 
 def mat2euler(M, cy_thresh=None):
     ''' Discover Euler angle vector from 3x3 matrix
 
@@ -268,6 +270,7 @@ def mat2euler(M, cy_thresh=None):
     return z, y, x
 
 
+# 计算欧拉角对应的四元数
 def euler2quat(z=0, y=0, x=0):
     ''' Return quaternion corresponding to these Euler angles
 
@@ -316,6 +319,7 @@ def euler2quat(z=0, y=0, x=0):
              cx*cy*sz + sx*cz*sy])
 
 
+# 从四元数中计算欧拉角
 def quat2euler(q):
     ''' Return Euler angles corresponding to quaternion `q`
 
@@ -345,6 +349,7 @@ def quat2euler(q):
     return mat2euler(nq.quat2mat(q))
 
 
+# 返回对应欧拉角的坐标轴和旋转角度，即旋转向量
 def euler2angle_axis(z=0, y=0, x=0):
     ''' Return angle, axis corresponding to these Euler angles
 
@@ -379,6 +384,7 @@ def euler2angle_axis(z=0, y=0, x=0):
     return nq.quat2angle_axis(euler2quat(z, y, x))
 
 
+# 从一个旋转向量计算欧拉角
 def angle_axis2euler(theta, vector, is_normalized=False):
     ''' Convert angle, axis pair to Euler angles
 

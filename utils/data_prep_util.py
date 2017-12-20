@@ -6,20 +6,25 @@ from plyfile import (PlyData, PlyElement, make2d, PlyParseError, PlyProperty)
 import numpy as np
 import h5py
 
+# 采样数据的位置和数量
 SAMPLING_BIN = os.path.join(BASE_DIR, 'third_party/mesh_sampling/build/pcsample')
 
 SAMPLING_POINT_NUM = 2048
 SAMPLING_LEAF_SIZE = 0.005
 
 MODELNET40_PATH = '../datasets/modelnet40'
+
+
+# 导出数据到文件
 def export_ply(pc, filename):
-	vertex = np.zeros(pc.shape[0], dtype=[('x', 'f4'), ('y', 'f4'), ('z', 'f4')])
+	vertex = np.zeros(pc.shape[0], dtype=[('x', 'f4'), ('y', 'f4'), ('z', 'f4')])  # 每个变量由三元组组成
 	for i in range(pc.shape[0]):
 		vertex[i] = (pc[i][0], pc[i][1], pc[i][2])
 	ply_out = PlyData([PlyElement.describe(vertex, 'vertex', comments=['vertices'])])
-	ply_out.write(filename)
+	ply_out.write(filename) 
 
-# Sample points on the obj shape
+
+# Sample points on the obj shape  取样
 def get_sampling_command(obj_filename, ply_filename):
     cmd = SAMPLING_BIN + ' ' + obj_filename
     cmd += ' ' + ply_filename
@@ -56,9 +61,9 @@ def batch_mkdir(output_folder, subdir_list):
 # Following are the helper functions to load save/load HDF5 files
 # ----------------------------------------------------------------
 
-# Write numpy array data and label to h5_filename
+# Write numpy array data and label to h5_filename 写data，label，normal到hdf5文件
 def save_h5_data_label_normal(h5_filename, data, label, normal, 
-		data_dtype='float32', label_dtype='uint8', noral_dtype='float32'):
+		data_dtype='float32', label_dtype='uint8', normal_dtype='float32'):
     h5_fout = h5py.File(h5_filename)
     h5_fout.create_dataset(
             'data', data=data,
@@ -75,7 +80,7 @@ def save_h5_data_label_normal(h5_filename, data, label, normal,
     h5_fout.close()
 
 
-# Write numpy array data and label to h5_filename
+# Write numpy array data and label to h5_filename 写出data,label到hdf5文件
 def save_h5(h5_filename, data, label, data_dtype='uint8', label_dtype='uint8'):
     h5_fout = h5py.File(h5_filename)
     h5_fout.create_dataset(
@@ -88,7 +93,7 @@ def save_h5(h5_filename, data, label, data_dtype='uint8', label_dtype='uint8'):
             dtype=label_dtype)
     h5_fout.close()
 
-# Read numpy array data and label from h5_filename
+# Read numpy array data and label from h5_filename，读取data,label,normal
 def load_h5_data_label_normal(h5_filename):
     f = h5py.File(h5_filename)
     data = f['data'][:]
@@ -130,16 +135,16 @@ def load_ply_normal(filename, point_num):
     return pc_array
 
 # Make up rows for Nxk array
-# Input Pad is 'edge' or 'constant'
+# Input Pad is 'edge' or 'constant' 数组四周填充
 def pad_arr_rows(arr, row, pad='edge'):
-    assert(len(arr.shape) == 2)
-    assert(arr.shape[0] <= row)
+    assert(len(arr.shape) == 2) # 数组为二维
+    assert(arr.shape[0] <= row)  # 数组的0维小于row，
     assert(pad == 'edge' or pad == 'constant')
-    if arr.shape[0] == row:
+    if arr.shape[0] == row: # 等于则不添加
         return arr
     if pad == 'edge':
-        return np.lib.pad(arr, ((0, row-arr.shape[0]), (0, 0)), 'edge')
+        return np.lib.pad(arr, ((0, row-arr.shape[0]), (0, 0)), 'edge') # 用1添加填充，0维度上前面添加0行，后面添加计算的行，1维上前后都不添加
     if pad == 'constant':
-        return np.lib.pad(arr, ((0, row-arr.shape[0]), (0, 0)), 'constant', (0, 0))
+        return np.lib.pad(arr, ((0, row-arr.shape[0]), (0, 0)), 'constant', (0, 0)) # 使用常数0添加填充，效果和上面一样
 
 

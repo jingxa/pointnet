@@ -6,6 +6,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(BASE_DIR)
 
 # Download dataset for point cloud classification
+#下载数据集 
 DATA_DIR = os.path.join(BASE_DIR, 'data')
 if not os.path.exists(DATA_DIR):
     os.mkdir(DATA_DIR)
@@ -17,6 +18,7 @@ if not os.path.exists(os.path.join(DATA_DIR, 'modelnet40_ply_hdf5_2048')):
     os.system('rm %s' % (zipfile))
 
 
+# 随机从B组点中选取一组点和标签
 def shuffle_data(data, labels):
     """ Shuffle data and labels.
         Input:
@@ -30,6 +32,7 @@ def shuffle_data(data, labels):
     return data[idx, ...], labels[idx], idx
 
 
+# 对于一组数据进行随机旋转：对点为单位，围绕y方向即up方向
 def rotate_point_cloud(batch_data):
     """ Randomly rotate the point clouds to augument the dataset
         rotation is per shape based along up direction
@@ -39,8 +42,8 @@ def rotate_point_cloud(batch_data):
           BxNx3 array, rotated batch of point clouds
     """
     rotated_data = np.zeros(batch_data.shape, dtype=np.float32)
-    for k in range(batch_data.shape[0]):
-        rotation_angle = np.random.uniform() * 2 * np.pi
+    for k in range(batch_data.shape[0]): # B次循环
+        rotation_angle = np.random.uniform() * 2 * np.pi # 旋转角度
         cosval = np.cos(rotation_angle)
         sinval = np.sin(rotation_angle)
         rotation_matrix = np.array([[cosval, 0, sinval],
@@ -51,6 +54,7 @@ def rotate_point_cloud(batch_data):
     return rotated_data
 
 
+# 通过给定旋转角旋转点云
 def rotate_point_cloud_by_angle(batch_data, rotation_angle):
     """ Rotate the point cloud along up direction with certain angle.
         Input:
@@ -71,6 +75,7 @@ def rotate_point_cloud_by_angle(batch_data, rotation_angle):
     return rotated_data
 
 
+#增大或者减小一点值
 def jitter_point_cloud(batch_data, sigma=0.01, clip=0.05):
     """ Randomly jitter points. jittering is per point.
         Input:
@@ -80,22 +85,27 @@ def jitter_point_cloud(batch_data, sigma=0.01, clip=0.05):
     """
     B, N, C = batch_data.shape
     assert(clip > 0)
-    jittered_data = np.clip(sigma * np.random.randn(B, N, C), -1*clip, clip)
+    jittered_data = np.clip(sigma * np.random.randn(B, N, C), -1*clip, clip)  #np.clip会给出一个区间，在区间之外的数字将被剪除到区间的边缘，例如给定一个区间[0,1]，则小于0的将变成0，大于1则变成1.
     jittered_data += batch_data
     return jittered_data
 
+
+# 获取文件名
 def getDataFiles(list_filename):
     return [line.rstrip() for line in open(list_filename)]
 
+# 载入h5文件
 def load_h5(h5_filename):
     f = h5py.File(h5_filename)
     data = f['data'][:]
     label = f['label'][:]
     return (data, label)
 
+
 def loadDataFile(filename):
     return load_h5(filename)
 
+# 载入数据，标签，分割
 def load_h5_data_label_seg(h5_filename):
     f = h5py.File(h5_filename)
     data = f['data'][:]
