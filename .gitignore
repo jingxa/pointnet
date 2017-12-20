@@ -1,6 +1,6 @@
 # python
 .idea
-
+__pycache__
 # vscode
 .vscode
 
